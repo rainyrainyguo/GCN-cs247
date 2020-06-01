@@ -537,13 +537,89 @@ def load_ourdata(now_phase = 1, testing = True):
         val_labels, u_val_idx, v_val_idx, test_labels, u_test_idx, v_test_idx, class_values
 
 
-args = {'dataset': 'ml_100k', 'learning_rate': 0.01, 'epochs': 1000, 'hidden': [500, 75], 'feat_hidden': 10, 'accumulation': 'stack', 'dropout': 0.7, 'num_basis_functions': 2, 'data_seed': 1234, 'summaries_dir': 'logs/2020-05-31_09:02:14.912270', 'norm_symmetric': False, 'features': True, 'write_summary': False, 'testing': True}
+# args = {'dataset': 'ml_100k', 'learning_rate': 0.01, 'epochs': 1000, 'hidden': [500, 75], 'feat_hidden': 10, 'accumulation': 'stack', 'dropout': 0.7, 'num_basis_functions': 2, 'data_seed': 1234, 'summaries_dir': 'logs/2020-05-31_09:02:14.912270', 'norm_symmetric': False, 'features': True, 'write_summary': False, 'testing': True}
 
 # Set random seed
 # seed = 123 # use only for unit testing
 seed = int(time.time())
 np.random.seed(seed)
 tf.set_random_seed(seed)
+
+
+# Settings
+ap = argparse.ArgumentParser()
+ap.add_argument("-d", "--dataset", type=str, default="ml_1m",
+                choices=['ml_100k', 'ml_1m', 'ml_10m', 'douban', 'yahoo_music', 'flixster'],
+                help="Dataset string.")
+
+ap.add_argument("-lr", "--learning_rate", type=float, default=0.01,
+                help="Learning rate")
+
+ap.add_argument("-e", "--epochs", type=int, default=2500,
+                help="Number training epochs")
+
+ap.add_argument("-ph", "--phase", type=int, default=2,
+                help="Current phase")
+
+ap.add_argument("-hi", "--hidden", type=int, nargs=2, default=[500, 75],
+                help="Number hidden units in 1st and 2nd layer")
+
+ap.add_argument("-fhi", "--feat_hidden", type=int, default=64,
+                help="Number hidden units in the dense layer for features")
+
+ap.add_argument("-ac", "--accumulation", type=str, default="sum", choices=['sum', 'stack'],
+                help="Accumulation function: sum or stack.")
+
+ap.add_argument("-do", "--dropout", type=float, default=0.7,
+                help="Dropout fraction")
+
+ap.add_argument("-nb", "--num_basis_functions", type=int, default=2,
+                help="Number of basis functions for Mixture Model GCN.")
+
+ap.add_argument("-ds", "--data_seed", type=int, default=1234,
+                help="""Seed used to shuffle data in data_utils, taken from cf-nade (1234, 2341, 3412, 4123, 1324).
+                     Only used for ml_1m and ml_10m datasets. """)
+
+ap.add_argument("-sdir", "--summaries_dir", type=str, default='logs/' + str(datetime.datetime.now()).replace(' ', '_'),
+                help="Directory for saving tensorflow summaries.")
+
+# Boolean flags
+fp = ap.add_mutually_exclusive_group(required=False)
+fp.add_argument('-nsym', '--norm_symmetric', dest='norm_symmetric',
+                help="Option to turn on symmetric global normalization", action='store_true')
+fp.add_argument('-nleft', '--norm_left', dest='norm_symmetric',
+                help="Option to turn on left global normalization", action='store_false')
+ap.set_defaults(norm_symmetric=True)
+
+fp = ap.add_mutually_exclusive_group(required=False)
+fp.add_argument('-f', '--features', dest='features',
+                help="Whether to use features (1) or not (0)", action='store_true')
+fp.add_argument('-no_f', '--no_features', dest='features',
+                help="Whether to use features (1) or not (0)", action='store_false')
+ap.set_defaults(features=False)
+
+fp = ap.add_mutually_exclusive_group(required=False)
+fp.add_argument('-ws', '--write_summary', dest='write_summary',
+                help="Option to turn on summary writing", action='store_true')
+fp.add_argument('-no_ws', '--no_write_summary', dest='write_summary',
+                help="Option to turn off summary writing", action='store_false')
+ap.set_defaults(write_summary=False)
+
+fp = ap.add_mutually_exclusive_group(required=False)
+fp.add_argument('-t', '--testing', dest='testing',
+                help="Option to turn on test set evaluation", action='store_true')
+fp.add_argument('-v', '--validation', dest='testing',
+                help="Option to only use validation set evaluation", action='store_false')
+ap.set_defaults(testing=False)
+
+
+args = vars(ap.parse_args())
+
+print('Settings:')
+print(args, '\n')
+
+
+
 # Define parameters
 DATASET = args['dataset']
 DATASEED = args['data_seed']
@@ -559,13 +635,14 @@ FEATURES = args['features']
 SYM = args['norm_symmetric']
 TESTING = args['testing']
 ACCUM = args['accumulation']
+PHASE = args['phase']
 
 SELFCONNECTIONS = False
 SPLITFROMFILE = True
 VERBOSE = True
 
 
-NUMCLASSES = 2
+NUMCLASSES = 
 
 # Splitting dataset in training, validation and test set
 
@@ -581,7 +658,7 @@ NUMCLASSES = 2
 
 u_features, v_features, adj_train, train_labels, train_u_indices, train_v_indices, \
     val_labels, val_u_indices, val_v_indices, test_labels, \
-    test_u_indices, test_v_indices, class_values = load_ourdata(now_phase = 1, testing = True)
+    test_u_indices, test_v_indices, class_values = load_ourdata(now_phase = PHASE, testing = TESTING)
 
 num_users, num_items = adj_train.shape
 
@@ -843,7 +920,7 @@ for epoch in range(NB_EPOCH):
         val_summary_writer.add_summary(summary, epoch)
         val_summary_writer.flush()
 
-    if epoch % 100 == 0 and epoch > 1000 and not TESTING and False:
+    if epoch % 100 == 0 and epoch > 300 and not TESTING and False:
         saver = tf.train.Saver()
         save_path = saver.save(sess, "tmp/%s_seed%d.ckpt" % (model.name, DATASEED), global_step=model.global_step)
 
