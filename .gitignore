@@ -1,0 +1,8 @@
+build/
+dist/
+gcmc.egg-info
+setup.py
+gcmc/logs/
+gcmc/tmp/
+gcmc/data/
+gcmc/*ipynb
