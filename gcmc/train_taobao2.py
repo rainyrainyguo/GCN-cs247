@@ -936,6 +936,11 @@ for epoch in range(NB_EPOCH):
         # Load back normal variables
         saver = tf.train.Saver()
         saver.restore(sess, save_path)
+        
+    if epoch % 100 == 0 and epoch > 300:
+        saver = tf.train.Saver()
+        save_path = saver.save(sess, "tmp/%s_seed%d.ckpt" % (model.name, DATASEED), global_step=model.global_step)        
+        
 
 
 # store model including exponential moving averages
